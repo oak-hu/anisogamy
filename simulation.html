@@ -102,7 +102,7 @@
     width: 12px; height: 12px; border-radius: 50%;
     background: var(--text-dim); border: 1px solid var(--bg); cursor: pointer;
   }
-  .bar-param-val { min-width: 26px; text-align: right; color: var(--text); }
+  .bar-param-val { min-width: 34px; text-align: right; color: var(--text); }
 
   .speed-row {
     display: flex; align-items: center; justify-content: center;
@@ -202,19 +202,15 @@
       <span class="bar-stat">σ <span class="stat-val" id="stat-std">—</span></span>
       <div class="bar-sep"></div>
       <div class="bar-param">
-        <span>mut prob</span>
-        <input type="range" id="p-mutp" min="0.01" max="1.00" step="0.01" value="0.10">
-        <span class="bar-param-val" id="pv-mutp">0.10</span>
+        <span>mutation %</span>
+        <input type="range" id="p-mutp" min="1" max="100" step="1" value="10">
+        <span class="bar-param-val" id="pv-mutp">10%</span>
       </div>
-      <div class="bar-param">
-        <span>mut size</span>
-        <input type="range" id="p-muts" min="0.01" max="0.10" step="0.01" value="0.01">
-        <span class="bar-param-val" id="pv-muts">0.01</span>
-      </div>
+      <!-- mutation size slider removed: mutations are ±1 bin in log-space -->
     </div>
     <div class="speed-row">
       <button class="btn-reset" id="btn-reset" title="Reset">↺</button>
-      <button class="speed-btn" data-speed="0">⏸︎</button>
+      <button class="speed-btn" data-speed="0" style="font-size:0.82rem;line-height:1;">⏸︎</button>
       <button class="speed-btn" data-speed="1">1×</button>
       <button class="speed-btn active" data-speed="5">5×</button>
       <button class="speed-btn" data-speed="25">25×</button>
@@ -229,7 +225,9 @@
   <!-- History (scrollable, now at top, gen 0 at bottom) -->
   <div class="history-section">
     <div class="history-viewport" id="history-viewport">
-      <canvas id="history-canvas"></canvas>
+      <div id="history-spacer" style="position:relative;width:100%;">
+        <canvas id="history-canvas" style="position:sticky;top:0;"></canvas>
+      </div>
     </div>
     <div class="canvas-label">now (top) → generation 0 (bottom)</div>
   </div>
@@ -251,137 +249,195 @@
     </p>
     <p>
       The shape we needed (graphed in the Substack post) is determined by the <span class="math">\(1.05\)</span> parameter, and the qualitative results are robust to this being strictly between <span class="math">\(1.0\)</span> and <span class="math">\(1.1\)</span>; meanwhile, the percentage is a ceiling on survival probability, and the qualitative results are robust to this being arbitrarily low or high (although of course in the latter case there will be an effective ceiling of <span class="math">\(100\%\)</span>). By contrast, Maire et al. effectively combine these two parameters, and so claim to just require a ceiling survival probability of <span class="math">\(50\%\)</span> or higher; but what is actually needed, for their survival function, is a ceiling survival probability of about <span class="math">\(50%\)</span> or higher. This appears much less robust, since biologically realistic ceiling survival probabilities may be much lower than these values. However, one can separate out the shape (how one approaches the cutoff size) from the ceiling value, and so be robust to arbitrary ceiling values.
-    </p> 
+    </p>
     <p>
-      In this simulation, we assume a fixed population size of <span class="math">\(256\)</span>, and assume that every individual lives for just one generation. The minimum gamete size is fixed at <span class="math">\(0.0001\)</span>, but the mutation probability and mutation severity are adjustable. Each copy of the gamete-gene in the population has a value of <span class="math">\(0.5\)</span> initially. The mean value of the gamete-genes decreases to an attractor point, but (given the set-up) this attractor point is a fitness <em>minimum</em>, such that it can be invaded both by mutants with slightly higher values and with slightly lower values; so, the population splits in two. For a (gentle, visually-explained) mathematical explanation and some intuition about these dynamics, see the <a href="https://offhandquibbles.substack.com/p/why-have-sex" style="color: var(--accent);">Substack</a> post.
+      In this visualisation, the horizontal axis is gamete size on a logarithmic scale (so that it is evenly spaced in terms of number of gametes produced), with color on a roughly linear scale. We assume a fixed population size of <span class="math">\(256\)</span>, and assume that every individual lives for just one generation. The gamete-gene values ranges between <span class="math">\(0.0001\)</span> and <span class="math">\(4\)</span>, and mutations go either up or down by one step on the log scale, which has <span class="math">\512\)</span> steps so that each mutation is makes the value about <span class="math">\(2\%\)</span> larger or smaller. The probability of such a mutation occurring for each gamete can be adjusted using the slider (which has a default value of <span class="math">\(10\%\)</span>). Each copy of the gamete-gene in the population has a value of <span class="math">\(0.5\)</span> initially. The mean value of the gamete-genes decreases to an attractor point, but (given the set-up) this attractor point is a fitness <em>minimum</em>, such that it can be invaded both by mutants with slightly higher values and with slightly lower values; so, the population splits in two. For a (gentle, visually-explained) mathematical explanation and some intuition about these dynamics, see the <a href="https://offhandquibbles.substack.com/p/why-have-sex" style="color: var(--accent);">Substack</a> post.
     </p>    
     <p>
-      In the end, the males are haploid (two small-value copies of the gamete-gene) and the females are diploid (one small-value copy of the gamete gene, and one large-value copy of the gamete-gene). The maximum possible gamete-gene value is <span class="math">\(3.00\)</span> in the simulation, but (as the female population never reaches a <span class="math">\(1.50\)</span> gamete size) this choice empirically is large enough not to interefere with things. However, the minimum gamete size is important: if it is within a few orders of magnitude of the "middle" of the survival sigmoid, then the males only produce a few orders of magnitude more gametes than the females. In that case, two gametes produced by females, each with large-value copies of the gamete-gene, may merge into a "super-female" zygote that produces massive gametes (roughly twice as big as the female gametes). Indeed, there may then stably be three sexes (with genotypes small-small, small-large, and large-large). Recall that, by contrast, human sex determination is such that our females are haploid and our males are diploid, rather than vice versa.
+      In the end, the males are haploid (two small-value copies of the gamete-gene) and the females are diploid (one small-value copy of the gamete gene, and one large-value copy of the gamete-gene). The maximum possible gamete-gene value is <span class="math">\(4.00\)</span> in the simulation, but (as the female population never reaches a <span class="math">\(1.50\)</span> gamete size) this choice empirically is large enough not to interefere with things. However, the minimum gamete size is important: if it is within a few orders of magnitude of the "middle" of the survival sigmoid, then the males only produce a few orders of magnitude more gametes than the females. In that case, two gametes produced by females, each with large-value copies of the gamete-gene, may merge into a "super-female" zygote that produces massive gametes (roughly twice as big as the female gametes). Indeed, there may then stably be three sexes (with genotypes small-small, small-large, and large-large). Recall that, by contrast, human sex determination is such that our females are haploid and our males are diploid, rather than vice versa.
     </p> 
   </div>
 
   <hr class="sep">
 
   <div class="credit">
-    Built primarily by <a href="https://claude.ai">Claude</a> (Anthropic), design & exposition primarily by <a href="https://0ak.hu">Oak Hu</a> · March 2026
+    Built primarily by <a href="https://claude.ai">Claude</a> (Anthropic), design & exposition primarily by Oak Hu · March 2026
   </div>
 
 </div>
 
 <script>
-// === SIMULATION ENGINE ===
+// === SIMULATION ENGINE (log-space discretisation) ===
+const N = 512;           // allele bins
 const MIN_SIZE = 0.0001;
-const MAX_SIZE = 3.0001;
-const HIST_BINS = 300;
-const VIEW_MAX = 1.5;
-const POP_SIZE = 256;
+const MAX_SIZE = 4;
+const LOG_MIN = Math.log(MIN_SIZE);
+const LOG_MAX = Math.log(MAX_SIZE);
+const LOG_STEP = (LOG_MAX - LOG_MIN) / (N - 1);
+const POP = 256;
 
-// Lookup table — 600 steps covers [0.001, 3.001] in exactly 0.005 increments
-const RESOLUTION = 600;
-const stepSize = 0.005;
-const sizeSteps = RESOLUTION + 1;
-let survivalTable = null;
+// Precompute sizes and reciprocals per bin
+const binSize = new Float64Array(N);
+const binInvSize = new Float64Array(N);  // 1/size, for gamete-count weighting
+for (let i = 0; i < N; i++) {
+  binSize[i] = Math.exp(LOG_MIN + i * LOG_STEP);
+  binInvSize[i] = 1 / binSize[i];
+}
 
-let population = [];
-let generation = 0;
-let history = []; // grows without bound
+function sizeToIndex(s) {
+  const logS = Math.log(Math.max(MIN_SIZE, Math.min(MAX_SIZE, s)));
+  return Math.min(N - 1, Math.max(0, Math.round((logS - LOG_MIN) / LOG_STEP)));
+}
 
-let stepsPerFrame = 5;
-let animationId = null;
-let lastFpsTime = performance.now();
-let fpsCount = 0;
-let fps = 0;
+// Survival lookup (Uint16: survival * 65535, saves ~50% memory vs Float32)
+let survTable = null;
 
-// === LOOKUP TABLE ===
 function initLookupTable() {
-  survivalTable = new Float32Array(sizeSteps * sizeSteps);
-  for (let i = 0; i < sizeSteps; i++) {
-    for (let j = i; j < sizeSteps; j++) {
-      const s1 = MIN_SIZE + i * stepSize;
-      const s2 = MIN_SIZE + j * stepSize;
-      const z = s1 + s2;
+  survTable = new Uint16Array(N * N);
+  for (let i = 0; i < N; i++) {
+    for (let j = i; j < N; j++) {
+      const z = binSize[i] + binSize[j];
       const v = Math.min(1, Math.max(0, 1 - 1.05 * Math.exp(-z * z)));
-      survivalTable[i * sizeSteps + j] = v;
-      survivalTable[j * sizeSteps + i] = v;
+      const q = (v * 65535 + 0.5) | 0;
+      survTable[i * N + j] = q;
+      survTable[j * N + i] = q;
     }
   }
 }
 
-function sizeToIndex(s) {
-  return Math.min(sizeSteps - 1, Math.max(0, Math.round((s - MIN_SIZE) / stepSize)));
+// Precompute colour LUT: original HSL scheme keyed on actual size.
+// hue = 270 - t*270, where t = clamp(size, 0.2, 1.3). s=85%, l=60%.
+// size≈0 → hue≈216 (blue), 0.5 → hue≈135 (green), 1.0 → hue=0 (red), >1.3 → wraps.
+const colR = new Uint8Array(N);
+const colG = new Uint8Array(N);
+const colB = new Uint8Array(N);
+for (let i = 0; i < N; i++) {
+  const t = Math.max(0.2, Math.min(1.3, binSize[i]));
+  const hue = ((270 - t * 270) % 360 + 360) % 360;
+  const h = hue / 360;
+  const s = 0.85, l = 0.60;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
+  const m = l - c / 2;
+  let r, g, b;
+  const sector = (h * 6) | 0;
+  switch (sector) {
+    case 0: r = c; g = x; b = 0; break;
+    case 1: r = x; g = c; b = 0; break;
+    case 2: r = 0; g = c; b = x; break;
+    case 3: r = 0; g = x; b = c; break;
+    case 4: r = x; g = 0; b = c; break;
+    default: r = c; g = 0; b = x;
+  }
+  colR[i] = ((r + m) * 255 + 0.5) | 0;
+  colG[i] = ((g + m) * 255 + 0.5) | 0;
+  colB[i] = ((b + m) * 255 + 0.5) | 0;
 }
-function roundToStep(v) {
-  return Math.round((v - MIN_SIZE) / stepSize) * stepSize + MIN_SIZE;
+
+function colStr(i, alpha) {
+  return `rgba(${colR[i]},${colG[i]},${colB[i]},${alpha})`;
 }
-function getSurvival(s1, s2) {
-  return survivalTable[sizeToIndex(s1) * sizeSteps + sizeToIndex(s2)];
-}
+
+// === STATE ===
+// Population: double-buffered typed arrays
+let popA1  = new Uint16Array(POP);
+let popA2  = new Uint16Array(POP);
+let popG   = new Float32Array(POP);
+let popGI  = new Uint16Array(POP);
+let nextA1 = new Uint16Array(POP);
+let nextA2 = new Uint16Array(POP);
+
+let generation = 0;
+// History: array of Uint8Array(N). Value = count (0..POP), NOT normalised.
+let history = [];
+
+let stepsPerFrame = 5;
+let animationId = null;
+let lastFpsTime = performance.now();
+let fpsCount = 0, fps = 0;
+
+// Cache slider value per frame, not per mutation
+let cachedMutProb = 0.10;
 
 // === POPULATION ===
-function createIndividual(a1, a2) {
-  a1 = roundToStep(a1); a2 = roundToStep(a2);
-  return { a1, a2, g: (a1 + a2) / 2 };
-}
-
-function mutate(allele) {
-  const mp = parseFloat(document.getElementById('p-mutp').value);
-  if (Math.random() < mp) {
-    const ms = parseFloat(document.getElementById('p-muts').value);
-    return Math.min(MAX_SIZE, Math.max(MIN_SIZE, roundToStep(allele + 2 * (0.5 - Math.random()) * ms)));
+function rebuildCaches() {
+  for (let i = 0; i < POP; i++) {
+    popG[i]  = (binSize[popA1[i]] + binSize[popA2[i]]) * 0.5;
+    popGI[i] = sizeToIndex(popG[i]);
   }
-  return allele;
 }
 
 function initPopulation() {
-  const initSize = roundToStep(0.50);
-  population = [];
-  for (let i = 0; i < POP_SIZE; i++) population.push(createIndividual(initSize, initSize));
+  const idx = sizeToIndex(0.50);
+  popA1.fill(idx);
+  popA2.fill(idx);
+  rebuildCaches();
   generation = 0;
   history = [];
   recordHistory();
 }
 
+function mutate(idx) {
+  if (Math.random() < cachedMutProb) {
+    return Math.min(N - 1, Math.max(0, idx + ((Math.random() < 0.5) ? -1 : 1)));
+  }
+  return idx;
+}
+
+// Pair count for POP individuals: POP*(POP+1)/2
+const PAIR_COUNT = (POP * (POP + 1)) >> 1;
+// Preallocate weight and pair arrays
+const wts = new Float64Array(PAIR_COUNT);
+const cum = new Float64Array(PAIR_COUNT);
+const prI = new Uint16Array(PAIR_COUNT);
+const prJ = new Uint16Array(PAIR_COUNT);
+
 function nextGeneration() {
-  const n = POP_SIZE;
-  const wts = [];
-  const prs = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = i; j < n; j++) {
-      let w = getSurvival(population[i].g, population[j].g) / (population[i].g * population[j].g);
-      if (i === j) w /= 2;
-      wts.push(w);
-      prs.push([i, j]);
+  cachedMutProb = parseFloat(document.getElementById('p-mutp').value) / 100;
+
+  // Build pair weights
+  let k = 0;
+  for (let i = 0; i < POP; i++) {
+    const gi = popG[i], idxI = popGI[i];
+    const invGi = 1 / gi;
+    for (let j = i; j < POP; j++) {
+      const surv = survTable[idxI * N + popGI[j]] * (1 / 65535);
+      let w = surv * invGi * (1 / popG[j]);
+      if (i === j) w *= 0.5;
+      wts[k] = w;
+      prI[k] = i;
+      prJ[k] = j;
+      k++;
     }
   }
-  const cum = new Float64Array(wts.length);
-  cum[0] = wts[0];
-  for (let k = 1; k < wts.length; k++) cum[k] = cum[k - 1] + wts[k];
-  const total = cum[cum.length - 1];
 
-  const newPop = [];
-  for (let i = 0; i < n; i++) {
+  // Cumulative sum
+  cum[0] = wts[0];
+  for (let k = 1; k < PAIR_COUNT; k++) cum[k] = cum[k - 1] + wts[k];
+  const total = cum[PAIR_COUNT - 1];
+
+  // Sample offspring into next buffers
+  for (let i = 0; i < POP; i++) {
     const r = Math.random() * total;
-    let lo = 0, hi = cum.length - 1;
+    let lo = 0, hi = PAIR_COUNT - 1;
     while (lo < hi) { const mid = (lo + hi) >> 1; cum[mid] < r ? lo = mid + 1 : hi = mid; }
-    const [pi, pj] = prs[lo];
-    const a1 = mutate(Math.random() < 0.5 ? population[pi].a1 : population[pi].a2);
-    const a2 = mutate(Math.random() < 0.5 ? population[pj].a1 : population[pj].a2);
-    newPop.push(createIndividual(a1, a2));
+    const pi = prI[lo], pj = prJ[lo];
+    nextA1[i] = mutate(Math.random() < 0.5 ? popA1[pi] : popA2[pi]);
+    nextA2[i] = mutate(Math.random() < 0.5 ? popA1[pj] : popA2[pj]);
   }
-  population = newPop;
+
+  // Swap buffers
+  let tmp;
+  tmp = popA1; popA1 = nextA1; nextA1 = tmp;
+  tmp = popA2; popA2 = nextA2; nextA2 = tmp;
+  rebuildCaches();
   generation++;
 }
 
 // === HISTORY ===
 function makeBins() {
-  const bins = new Float32Array(HIST_BINS);
-  const binW = VIEW_MAX / HIST_BINS;
-  for (let i = 0; i < population.length; i++) {
-    const idx = Math.floor(population[i].g / binW);
-    if (idx >= 0 && idx < HIST_BINS) bins[idx]++;
-  }
-  // Normalise to population size so brightness reflects absolute density
-  for (let i = 0; i < HIST_BINS; i++) bins[i] /= POP_SIZE;
+  const bins = new Uint8Array(N);
+  for (let i = 0; i < POP; i++) bins[popGI[i]]++;
   return bins;
 }
 
@@ -389,184 +445,199 @@ function recordHistory() {
   history.push(makeBins());
 }
 
-// === COLOUR === (h/t Gemini)
-function posColor(theta, alpha) {
-  const t = Math.max(0.2, Math.min(1.3, theta));
-  return `hsla(${270 - (t * 270)}, 85%, 60%, ${alpha})`;
-}
-
 // === CANVASES ===
 const hCanvas = document.getElementById('histogram-canvas');
 const tCanvas = document.getElementById('history-canvas');
 const hCtx = hCanvas.getContext('2d');
 const tCtx = tCanvas.getContext('2d');
+const historyViewport = document.getElementById('history-viewport');
 
 function getDpr() { return Math.min(window.devicePixelRatio || 1, 2); }
 
 function sizeHistCanvas() {
   const dpr = getDpr();
   const w = hCanvas.parentElement.clientWidth;
-  const h = Math.round(w * 0.3);
+  const h = Math.round(w * 0.33);
   hCanvas.width = w * dpr; hCanvas.height = h * dpr;
   hCanvas.style.height = h + 'px';
   hCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
-let historyW = 0;
-let historyNeedsFullRedraw = true;
-const historyViewport = document.getElementById('history-viewport');
+// === HISTORY CANVAS (virtual scroll) ===
+// Canvas is always exactly viewport-sized. We redraw only visible rows each frame.
+// A spacer div provides the total scrollable height.
+let rowH = 2;           // CSS px per generation row
+let historyW = 0;       // CSS width
+let historyNeedsRedraw = true;
 
-function getBaseHistoryH() {
-  return historyViewport.clientHeight || Math.round(historyW * 0.5);
+const MARGIN_L = 38, MARGIN_R = 40;
+const historySpacer = document.getElementById('history-spacer');
+
+function getViewportH() {
+  return historyViewport.clientHeight || 300;
 }
 
-function drawHistoryRow(bins, yPx, rowH) {
-  const m = { l: 30, r: 40 };
-  const pw = historyW - m.l - m.r;
-  const bw = pw / HIST_BINS + 0.5;
-
-  for (let i = 0; i < HIST_BINS; i++) {
-    if (bins[i] < 0.003) continue;
-    const theta = (i / HIST_BINS) * VIEW_MAX;
-    const x = m.l + (i / HIST_BINS) * pw;
-    const alpha = Math.min(0.95, Math.sqrt(bins[i]) * 2.5);
-    tCtx.fillStyle = posColor(theta, alpha);
-    tCtx.fillRect(x, yPx, bw, rowH + 0.5);
-  }
-}
-
-function drawHistoryLabels() {
-  const dpr = getDpr();
-  const W = historyW;
-  const H = tCanvas.height / dpr;
-  const m = { r: 40 };
-
-  tCtx.fillStyle = '#3a3a55'; tCtx.font = '10px JetBrains Mono, monospace';
-  if (history.length > 1) {
-    tCtx.save();
-    tCtx.translate(W - m.r + 14, 4);
-    tCtx.rotate(Math.PI / 2);
-    tCtx.textAlign = 'left';
-    tCtx.textBaseline = 'middle';
-    tCtx.fillText('gen ' + generation, 0, 0);
-    tCtx.restore();
-
-    tCtx.save();
-    tCtx.translate(W - m.r + 14, H - 4);
-    tCtx.rotate(Math.PI / 2);
-    tCtx.textAlign = 'right';
-    tCtx.textBaseline = 'middle';
-    tCtx.fillText('gen 0', 0, 0);
-    tCtx.restore();
-  }
-}
-
-function fullRedrawHistory() {
+function sizeHistoryCanvas() {
   const dpr = getDpr();
   historyW = tCanvas.parentElement.clientWidth;
-  const rows = Math.max(1, history.length);
-  const baseH = getBaseHistoryH();
-
-  // Squash into baseH until 1px/row, then grow
-  let h, rowH;
-  if (rows <= baseH) {
-    h = baseH;
-    rowH = h / rows;
-  } else {
-    h = rows; // 1px per row
-    rowH = 1;
-  }
-
-  // Save scroll position from top
-  const savedScrollTop = historyViewport.scrollTop;
-  const oldCanvasH = parseFloat(tCanvas.style.height) || 0;
-
+  const vpH = getViewportH();
   tCanvas.width = historyW * dpr;
-  tCanvas.height = h * dpr;
-  tCanvas.style.height = h + 'px';
+  tCanvas.height = vpH * dpr;
+  tCanvas.style.height = vpH + 'px';
   tCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
 
-  tCtx.fillStyle = '#0f0f16';
-  tCtx.fillRect(0, 0, historyW, h);
+function updateSpacer() {
+  const totalH = Math.max(getViewportH(), history.length * rowH);
+  historySpacer.style.height = totalH + 'px';
+}
 
-  for (let r = 0; r < rows; r++) {
-    drawHistoryRow(history[rows - 1 - r], r * rowH, rowH);
-  }
-  drawHistoryLabels();
-  historyNeedsFullRedraw = false;
-
-  // Restore scroll position
-  const growth = h - oldCanvasH;
-  if (savedScrollTop <= 2 && growth >= 0) {
-    historyViewport.scrollTop = 0;
-  } else {
-    historyViewport.scrollTop = savedScrollTop + Math.max(0, growth);
+function drawHistoryRow(bins, yPx, h) {
+  const pw = historyW - MARGIN_L - MARGIN_R;
+  const bw = pw / N + 0.5;
+  for (let i = 0; i < N; i++) {
+    if (bins[i] === 0) continue;
+    const alpha = Math.min(0.95, Math.sqrt(bins[i] / POP) * 2.5);
+    const x = MARGIN_L + (i / N) * pw;
+    tCtx.fillStyle = colStr(i, alpha);
+    tCtx.fillRect(x, yPx, bw, h + 0.5);
   }
 }
 
+function drawHistoryLabels(firstRow, lastRow) {
+  const W = historyW;
+  const vpH = getViewportH();
+  tCtx.fillStyle = '#7a7a99'; tCtx.font = '10px JetBrains Mono, monospace';
+  if (history.length > 1) {
+    // Show gen number for top visible row
+    tCtx.save();
+    tCtx.translate(W - MARGIN_R + 14, 4);
+    tCtx.rotate(Math.PI / 2);
+    tCtx.textAlign = 'left'; tCtx.textBaseline = 'middle';
+    tCtx.fillText('gen ' + firstRow, 0, 0);
+    tCtx.restore();
+
+    // Show gen number for bottom visible row
+    tCtx.save();
+    tCtx.translate(W - MARGIN_R + 14, vpH - 4);
+    tCtx.rotate(Math.PI / 2);
+    tCtx.textAlign = 'right'; tCtx.textBaseline = 'middle';
+    tCtx.fillText('gen ' + lastRow, 0, 0);
+    tCtx.restore();
+  }
+}
+
+function redrawHistory() {
+  const vpH = getViewportH();
+  const scrollTop = historyViewport.scrollTop;
+
+  // Clear
+  tCtx.fillStyle = '#0f0f16';
+  tCtx.fillRect(0, 0, historyW, vpH);
+
+  if (history.length === 0) return;
+
+  // Virtual rows: row 0 = newest gen, row (len-1) = gen 0.
+  // Virtual row r maps to history[history.length - 1 - r].
+  const firstVRow = Math.max(0, Math.floor(scrollTop / rowH));
+  const lastVRow = Math.min(history.length - 1, Math.ceil((scrollTop + vpH) / rowH));
+
+  const len = history.length;
+  for (let r = firstVRow; r <= lastVRow; r++) {
+    const yInCanvas = r * rowH - scrollTop;
+    drawHistoryRow(history[len - 1 - r], yInCanvas, rowH);
+  }
+
+  // Labels: show gen numbers for top and bottom visible rows
+  const topGen = len - 1 - firstVRow;  // newest visible
+  const botGen = len - 1 - lastVRow;   // oldest visible
+  drawHistoryLabels(topGen, botGen);
+  historyNeedsRedraw = false;
+}
+
+// Redraw on scroll
+historyViewport.addEventListener('scroll', () => { historyNeedsRedraw = true; }, { passive: true });
+
 // === DRAWING: HISTOGRAM ===
+const Y_MAX_FRAC = 0.25; // chart height = 25% of pop
+
 function drawHistogram() {
   const dpr = getDpr();
   const W = hCanvas.width / dpr, H = hCanvas.height / dpr;
-  const m = { l: 30, r: 40, t: 8, b: 20 };
+  const m = { l: 38, r: 40, t: 8, b: 20 };
   const pw = W - m.l - m.r, ph = H - m.t - m.b;
 
   hCtx.fillStyle = '#0f0f16';
   hCtx.fillRect(0, 0, W, H);
 
+  // Y gridlines and labels (% of pop)
   hCtx.strokeStyle = '#1c1c2e'; hCtx.lineWidth = 1;
-  for (let g = 0; g <= 4; g++) {
-    const y = m.t + (g / 4) * ph;
+  hCtx.fillStyle = '#7a7a99'; hCtx.font = '9px JetBrains Mono, monospace';
+  hCtx.textAlign = 'right'; hCtx.textBaseline = 'middle';
+  const ySteps = 5;
+  const yStepFrac = Y_MAX_FRAC / ySteps;
+  for (let g = 0; g <= ySteps; g++) {
+    const y = m.t + ph - (g / ySteps) * ph;
     hCtx.beginPath(); hCtx.moveTo(m.l, y); hCtx.lineTo(W - m.r, y); hCtx.stroke();
+    if (g > 0) {
+      const pct = Math.round(g * yStepFrac * 100);
+      hCtx.fillText(pct + '%', m.l - 4, y);
+    }
   }
 
-  const bins = new Float32Array(HIST_BINS);
-  const binW = VIEW_MAX / HIST_BINS;
-  for (let i = 0; i < population.length; i++) {
-    const idx = Math.floor(population[i].g / binW);
-    if (idx >= 0 && idx < HIST_BINS) bins[idx]++;
-  }
+  // Bin population by log-space index
+  const bins = new Uint8Array(N);
+  for (let i = 0; i < POP; i++) bins[popGI[i]]++;
 
-  const barW = pw / HIST_BINS;
-  for (let i = 0; i < HIST_BINS; i++) {
+  const barW = pw / N;
+  for (let i = 0; i < N; i++) {
     if (bins[i] === 0) continue;
-    const theta = (i / HIST_BINS) * VIEW_MAX;
-    const barH = (bins[i] / POP_SIZE) * ph * 0.9;
+    const frac = bins[i] / POP;
+    const barH = Math.min(ph, (frac / Y_MAX_FRAC) * ph);
     const x = m.l + i * barW;
     const y = m.t + ph - barH;
 
-    hCtx.fillStyle = posColor(theta, 0.15);
+    hCtx.fillStyle = colStr(i, 0.15);
     hCtx.fillRect(x, y, barW + 0.5, barH);
-    hCtx.fillStyle = posColor(theta, 0.85);
+    hCtx.fillStyle = colStr(i, 0.85);
     hCtx.fillRect(x, y, barW + 0.5, Math.min(2.5, barH));
   }
 
-  hCtx.fillStyle = '#3a3a55'; hCtx.font = '10px JetBrains Mono, monospace';
-  const ticks = [0, 0.5, 1.0, 1.5];
+  // X-axis ticks with visible marks
+  hCtx.fillStyle = '#7a7a99'; hCtx.font = '10px JetBrains Mono, monospace';
+  hCtx.strokeStyle = '#7a7a99'; hCtx.lineWidth = 1;
+  const ticks = [0.0001, 0.001, 0.01, 0.1, 1, 2, 3, 4];
   for (const v of ticks) {
-    const x = m.l + (v / VIEW_MAX) * pw;
-    // Right-align the last tick so it doesn't overflow
-    if (v === VIEW_MAX) {
-      hCtx.textAlign = 'right';
-    } else if (v === 0) {
-      hCtx.textAlign = 'left';
-    } else {
-      hCtx.textAlign = 'center';
-    }
-    hCtx.fillText(v.toFixed(1), x, H - m.b + 13);
+    const idx = sizeToIndex(v);
+    const x = m.l + (idx / N) * pw;
+
+    // Tick mark
+    hCtx.beginPath();
+    hCtx.moveTo(x, m.t + ph);
+    hCtx.lineTo(x, m.t + ph + 4);
+    hCtx.stroke();
+
+    // Label
+    hCtx.textAlign = 'center';
+    hCtx.textBaseline = 'alphabetic';
+    const label = v >= 1 ? v.toFixed(0) : String(v);
+    hCtx.fillText(label, x, H - m.b + 13);
   }
 }
 
-// (drawHistory is now handled incrementally above)
-
 // === STATS ===
+const statGen  = document.getElementById('stat-gen');
+const statMean = document.getElementById('stat-mean');
+const statStd  = document.getElementById('stat-std');
+
 function updateStats() {
-  const sizes = population.map(p => p.g);
-  const mean = sizes.reduce((a, b) => a + b, 0) / sizes.length;
-  const v = sizes.reduce((a, b) => a + (b - mean) ** 2, 0) / sizes.length;
-  document.getElementById('stat-gen').textContent = generation;
-  document.getElementById('stat-mean').textContent = mean.toFixed(3);
-  document.getElementById('stat-std').textContent = Math.sqrt(v).toFixed(3);
+  let sum = 0, sum2 = 0;
+  for (let i = 0; i < POP; i++) { const g = popG[i]; sum += g; sum2 += g * g; }
+  const mean = sum / POP;
+  const std = Math.sqrt(sum2 / POP - mean * mean);
+  statGen.textContent = generation;
+  statMean.textContent = mean.toFixed(3);
+  statStd.textContent = std.toFixed(3);
 }
 
 // === ANIMATION ===
@@ -577,9 +648,22 @@ function tick(now) {
   if (stepsPerFrame > 0) {
     for (let s = 0; s < stepsPerFrame; s++) nextGeneration();
     recordHistory();
-    fullRedrawHistory();
-  } else if (historyNeedsFullRedraw) {
-    fullRedrawHistory();
+    updateSpacer();
+
+    // Scroll anchoring: a new row was inserted at virtual row 0 (top).
+    // If tracking newest (near top), stay at 0.
+    // Otherwise, bump scrollTop to keep the same generation visible.
+    const vp = historyViewport;
+    if (vp.scrollTop < rowH * 3) {
+      vp.scrollTop = 0;
+    } else {
+      vp.scrollTop += rowH;
+    }
+    historyNeedsRedraw = true;
+  }
+
+  if (historyNeedsRedraw) {
+    redrawHistory();
   }
 
   drawHistogram();
@@ -587,12 +671,30 @@ function tick(now) {
   animationId = requestAnimationFrame(tick);
 }
 
-// === SPEED BUTTONS ===
+// === ZOOM BUTTONS (were speed buttons) ===
 const speedBtns = document.querySelectorAll('.speed-btn');
+
 function applySpeed(val) {
   stepsPerFrame = val;
   speedBtns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.speed) === val));
+
+  // Which generation is at the top of the viewport before zoom change?
+  // Virtual row 0 = newest. scrollTop / rowH = first visible virtual row.
+  const topVRow = historyViewport.scrollTop / rowH;
+
+  const oldRowH = rowH;
+  if (val === 1) rowH = 4;
+  else if (val === 5) rowH = 2;
+  else if (val === 25) rowH = 1;
+
+  updateSpacer();
+
+  // Keep the same virtual row at the top of the viewport
+  historyViewport.scrollTop = topVRow * rowH;
+
+  historyNeedsRedraw = true;
 }
+
 speedBtns.forEach(b => b.addEventListener('click', () => applySpeed(parseInt(b.dataset.speed))));
 
 // === RESET ===
@@ -600,23 +702,24 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   initPopulation();
   applySpeed(0);
   sizeHistCanvas();
-  historyNeedsFullRedraw = true;
+  sizeHistoryCanvas();
+  updateSpacer();
+  historyNeedsRedraw = true;
 });
 
 // === PARAM SLIDERS ===
-['mutp', 'muts'].forEach(key => {
-  const el = document.getElementById('p-' + key);
-  el.addEventListener('input', () => {
-    document.getElementById('pv-' + key).textContent = parseFloat(el.value).toFixed(2);
-  });
+document.getElementById('p-mutp').addEventListener('input', () => {
+  document.getElementById('pv-mutp').textContent = document.getElementById('p-mutp').value + '%';
 });
 
 // === INIT ===
-window.addEventListener('resize', () => { sizeHistCanvas(); historyNeedsFullRedraw = true; });
+window.addEventListener('resize', () => { sizeHistCanvas(); sizeHistoryCanvas(); historyNeedsRedraw = true; });
 sizeHistCanvas();
 initLookupTable();
 initPopulation();
-fullRedrawHistory();
+sizeHistoryCanvas();
+updateSpacer();
+redrawHistory();
 applySpeed(5);
 requestAnimationFrame(tick);
 </script>
